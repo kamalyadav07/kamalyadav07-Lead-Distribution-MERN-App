@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { uploadLeads } from '../api/leads';
-import './LeadDistribution.css'; // We'll create this for styling
+import './LeadDistribution.css';
 
-const LeadDistribution = () => {
+const LeadDistribution = ({ onUploadSuccess }) => {
     const [file, setFile] = useState(null);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
@@ -30,6 +30,13 @@ const LeadDistribution = () => {
             setMessage(response.message);
             setFile(null); // Clear the file input after successful upload
             e.target.reset(); // Resets the form including the file input
+            
+            // This is the new line: it calls the function passed from the dashboard
+            // to trigger a refresh of the leads list.
+            if (onUploadSuccess) {
+                onUploadSuccess();
+            }
+
         } catch (err) {
             setError(err.response?.data?.message || 'File upload failed. Please try again.');
         } finally {

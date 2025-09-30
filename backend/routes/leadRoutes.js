@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { upload, uploadLeads } = require('../controllers/leadController');
+// Add getDistributedLeads to the import
+const { upload, uploadLeads, getDistributedLeads } = require('../controllers/leadController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// @route   POST /api/leads/upload
-// This route is protected and handles a single file upload with the field name 'file'
 router.post('/upload', authMiddleware, upload.single('file'), uploadLeads);
+
+// Add this new GET route
+router.get('/', authMiddleware, getDistributedLeads);
 
 module.exports = router;

@@ -26,7 +26,7 @@ const storage = multer.memoryStorage();
 exports.upload = multer({ storage: storage, fileFilter: fileFilter });
 
 
-// --- Main Controller Logic ---
+// --- Upload and Distribute Leads Logic ---
 
 // @desc    Upload a CSV/Excel and distribute leads
 // @route   POST /api/leads/upload
@@ -37,15 +37,14 @@ exports.uploadLeads = async (req, res) => {
     }
 
     try {
-        // --- 1. Fetch Agents ---
-        // As per requirements, we distribute among 5 agents.
+        // 1. Fetch Agents
         const agents = await Agent.find().limit(5);
         if (agents.length < 5) {
             return res.status(400).json({ message: `Need at least 5 agents to distribute. Found only ${agents.length}.` });
         }
         const agentIds = agents.map(agent => agent._id);
 
-        // --- 2. Parse File Data ---
+        // 2. Parse File Data
         let leads = [];
         const bufferStream = new stream.PassThrough();
         bufferStream.end(req.file.buffer);
@@ -54,7 +53,6 @@ exports.uploadLeads = async (req, res) => {
             bufferStream
                 .pipe(csv())
                 .on('data', (data) => {
-                    // Assuming headers are FirstName, Phone, Notes
                     if (data.FirstName && data.Phone) {
                         leads.push({ firstName: data.FirstName, phone: data.Phone, notes: data.Notes || '' });
                     }
@@ -81,26 +79,26 @@ exports.uploadLeads = async (req, res) => {
     }
 };
 
-// --- Helper function for distribution and saving ---
+// Helper function for distribution and saving
 async function distributeAndSave(leads, agentIds, res) {
     if (leads.length === 0) {
         return res.status(400).json({ message: 'No valid leads found in the file. Ensure columns are named FirstName and Phone.' });
     }
 
-    // --- 3. Distribution Logic ---
+    // 3. Distribution Logic
     const distributedLeads = [];
     const totalLeads = leads.length;
     const numAgents = agentIds.length;
 
     leads.forEach((lead, index) => {
-        const agentIndex = index % numAgents; // This handles sequential distribution perfectly
+        const agentIndex = index % numAgents;
         distributedLeads.push({
             ...lead,
             assignedTo: agentIds[agentIndex],
         });
     });
 
-    // --- 4. Save to Database ---
+    // 4. Save to Database
     try {
         await Lead.insertMany(distributedLeads);
         res.status(200).json({
@@ -111,3 +109,32 @@ async function distributeAndSave(leads, agentIds, res) {
         res.status(500).send('Database Error');
     }
 }
+
+
+// --- Fetch Distributed Leads Logic ---
+
+// @desc    Get all leads, grouped by agent
+// @route   GET /api/leads
+// @access  Private (Admin only)
+exports.getDistributedLeads = async (req, res) => {
+    try {
+        // Fetch all leads and populate the 'assignedTo' field with agent's name and email
+        const leads = await Lead.find().populate('assignedTo', 'name email');
+
+        // Group the leads by agent name
+        const groupedLeads = leads.reduce((acc, lead) => {
+            const agentName = lead.assignedTo ? lead.assignedTo.name : 'Unassigned';
+            if (!acc[agentName]) {
+                acc[agentName] = [];
+            }
+            acc[agentName].push(lead);
+            return acc;
+        }, {});
+
+        res.status(200).json(groupedLeads);
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
