@@ -14,8 +14,7 @@ A full-stack MERN application built as a technical assessment. This project prov
 ---
 ## 📸 Screenshot
 
-*(You can replace this with a real screenshot of your dashboard)*
-![Admin Dashboard Screenshot](https://i.postimg.cc/P5p823S7/image.png)
+![Admin Dashboard Screenshot](https://i.postimg.cc/RFJVX5T9/Screenshot-2025-09-30-112551.png)
 
 ---
 ## 💻 Tech Stack
